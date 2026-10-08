@@ -1,0 +1,18 @@
+{
+  "id": 0,
+  "category": {
+    "id": 1,
+    "name": "dogs"
+  },
+  "name": "",
+  "photoUrls": [
+    "https://example.com/foto.jpg"
+  ],
+  "tags": [
+    {
+      "id": 1,
+      "name": "automatizacion"
+    }
+  ],
+  "status": "available"
+}

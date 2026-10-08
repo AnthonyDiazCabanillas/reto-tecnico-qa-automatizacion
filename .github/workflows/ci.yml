@@ -1,0 +1,119 @@
+name: CI - Automatización QA
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+  schedule:
+    # Lunes a viernes 7:00 a. m. hora de Lima (12:00 UTC)
+    - cron: "0 12 * * 1-5"
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  karate:
+    name: API · Karate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: karateNttdataDemo
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Instalar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+          cache-dependency-path: karateNttdataDemo/pom.xml
+
+      - name: Ejecutar pruebas de API
+        run: mvn -B clean test -Dkarate.env=dev
+
+      - name: Resumen de resultados
+        if: always()
+        run: node ../scripts/ci/resumen-karate.js >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publicar reportes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-karate
+          path: |
+            karateNttdataDemo/target/karate-reports
+            karateNttdataDemo/target/cucumber-html-reports
+          if-no-files-found: warn
+          retention-days: 14
+
+  playwright:
+    name: UI · Playwright (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - browser: chrome
+            script: test-dev
+            engine: chromium
+          - browser: firefox
+            script: test-firefox
+            engine: firefox
+          - browser: webkit
+            script: test-webkit
+            engine: webkit
+    defaults:
+      run:
+        working-directory: playwright-pacifico
+    env:
+      HEADLESS: "true"
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: playwright-pacifico/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Instalar navegadores
+        # chromium siempre: se usa para generar el PDF de evidencias
+        run: npx playwright install --with-deps chromium ${{ matrix.engine }}
+
+      - name: Ejecutar pruebas UI
+        run: npm run ${{ matrix.script }}
+
+      - name: Generar reportes (si hubo fallos)
+        if: failure()
+        continue-on-error: true
+        run: npm run reportes
+        env:
+          ENV: dev
+          BROWSER: ${{ matrix.browser }}
+
+      - name: Resumen de resultados
+        if: always()
+        run: node ../scripts/ci/resumen-playwright.js "${{ matrix.browser }}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publicar reportes, PDF de evidencias y traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-playwright-${{ matrix.browser }}
+          path: |
+            playwright-pacifico/test-results
+            playwright-pacifico/allure-results
+          if-no-files-found: warn
+          retention-days: 14

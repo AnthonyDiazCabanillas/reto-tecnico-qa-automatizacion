@@ -1,0 +1,17 @@
+# Dependencias y compilación
+node_modules/
+target/
+
+# Reportes y resultados generados
+test-results/
+allure-results/
+allure-report/
+playwright-report/
+*.log
+
+# IDE / sistema
+.idea/
+.vscode/
+*.iml
+.DS_Store
+__MACOSX/
