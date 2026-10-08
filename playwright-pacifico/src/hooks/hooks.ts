@@ -17,7 +17,10 @@ Before(async function () {
     // Chrome con ventana: viewport null = usa el tamaño real de la ventana maximizada.
     // Headless / Firefox / WebKit: resolución fija Full HD para capturas consistentes.
     const maximizado = process.env.BROWSER === "chrome" && !isHeadless();
-    global.context = await global.browser.newContext({ viewport: maximizado ? null : { width: 1920, height: 1080 } });
+    global.context = await global.browser.newContext({
+        viewport: maximizado ? null : { width: 1920, height: 1080 },
+        ignoreHTTPSErrors: true
+    });
     // Trace de Playwright (DOM, red, consola y capturas) para diagnosticar fallos
     await global.context.tracing.start({ screenshots: true, snapshots: true, sources: true });
     global.page = await global.context.newPage();
