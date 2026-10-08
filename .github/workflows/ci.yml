@@ -24,10 +24,10 @@ jobs:
         working-directory: karateNttdataDemo
     steps:
       - name: Descargar código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Instalar Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -56,41 +56,33 @@ jobs:
     name: UI · Playwright (${{ matrix.browser }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Imagen oficial de Playwright con la MISMA versión del proyecto (1.45.3):
+    # trae los 3 navegadores y todas sus dependencias, sin depender de la versión de Ubuntu del runner
+    container:
+      image: mcr.microsoft.com/playwright:v1.45.3-jammy
     strategy:
       fail-fast: false
       matrix:
         include:
           - browser: chrome
             script: test-dev
-            engine: chromium
           - browser: firefox
             script: test-firefox
-            engine: firefox
           - browser: webkit
             script: test-webkit
-            engine: webkit
     defaults:
       run:
         working-directory: playwright-pacifico
     env:
       HEADLESS: "true"
+      # Firefox exige HOME=/root cuando corre como root dentro del contenedor
+      HOME: /root
     steps:
       - name: Descargar código
-        uses: actions/checkout@v4
-
-      - name: Instalar Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: playwright-pacifico/package-lock.json
+        uses: actions/checkout@v5
 
       - name: Instalar dependencias
         run: npm ci
-
-      - name: Instalar navegadores
-        # chromium siempre: se usa para generar el PDF de evidencias
-        run: npx playwright install --with-deps chromium ${{ matrix.engine }}
 
       - name: Ejecutar pruebas UI
         run: npm run ${{ matrix.script }}
